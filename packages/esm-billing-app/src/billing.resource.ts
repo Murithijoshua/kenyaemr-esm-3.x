@@ -1,5 +1,5 @@
 import useSWR from 'swr';
-import { formatDate, parseDate, openmrsFetch, useSession, OpenmrsResource } from '@openmrs/esm-framework';
+import { formatDate, parseDate, openmrsFetch, useSession, useVisit } from '@openmrs/esm-framework';
 import { FacilityDetail, MappedBill, PatientInvoice } from './types';
 import isEmpty from 'lodash-es/isEmpty';
 import sortBy from 'lodash-es/sortBy';
@@ -31,8 +31,9 @@ export const useBills = (patientUuid: string = '', billStatus: string = '') => {
       cashPointLocation: bill?.cashPoint?.location?.display,
       dateCreated: bill?.dateCreated ? formatDate(parseDate(bill.dateCreated), { mode: 'wide' }) : '--',
       lineItems: bill.lineItems,
-      billingService: bill.lineItems.map((bill) => bill.item).join(' & '),
+      billingService: bill.lineItems.map((bill) => bill.item || bill.billableService || '--').join('  '),
       payments: bill.payments,
+      display: bill.display,
       totalAmount: bill?.lineItems?.map((item) => item.price * item.quantity).reduce((prev, curr) => prev + curr, 0),
     };
 
@@ -117,3 +118,39 @@ export function useDefaultFacility() {
   const { data, isLoading } = useSWR<{ data: FacilityDetail }>(authenticated ? url : null, openmrsFetch, {});
   return { data: data?.data, isLoading: isLoading };
 }
+
+export function useFetchSearchResults(searchVal, category) {
+  let url = ``;
+  if (category == 'Stock Item') {
+    url = `/ws/rest/v1/stockmanagement/stockitem?v=default&limit=10&q=${searchVal}`;
+  } else {
+    url = `/ws/rest/v1/cashier/billableService?v=custom:(uuid,name,shortName,serviceStatus,serviceType:(display),servicePrices:(uuid,name,price,paymentMode))`;
+  }
+  const { data, error, isLoading, isValidating } = useSWR(searchVal ? url : null, openmrsFetch, {});
+
+  return { data: data?.data, error, isLoading: isLoading, isValidating };
+}
+
+export const usePatientPaymentInfo = (patientUuid: string) => {
+  const { currentVisit } = useVisit(patientUuid);
+  const attributes = currentVisit?.attributes ?? [];
+  const paymentInformation = attributes
+    .map((attribute) => ({
+      name: attribute.attributeType.name,
+      value: attribute.value,
+    }))
+    .filter(({ name }) => name === 'Insurance scheme' || name === 'Policy Number');
+
+  return paymentInformation;
+};
+
+export const processBillItems = (payload) => {
+  const url = `/ws/rest/v1/cashier/bill`;
+  return openmrsFetch(url, {
+    method: 'POST',
+    body: payload,
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+};

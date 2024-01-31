@@ -143,3 +143,28 @@
   @include type.type-style('body-compact-01');
   color: $text-02;
 }
+
+.table {
+  tr[data-child-row] td {
+    padding-left: 2rem !important;
+  }
+}
+
+.billingHeading {
+  position: relative;
+  max-width: 400px;
+  text-align: 'left';
+  margin-bottom: 40px;
+}
+
+.billingHeading::after {
+  position: absolute;
+  bottom: -10px;
+  width: 50px;
+  height: 5px;
+  background: green;
+  content: '';
+  display: block;
+  left: 6%;
+  transform: translatex(-50%);
+}

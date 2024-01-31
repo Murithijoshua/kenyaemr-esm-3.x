@@ -16,6 +16,7 @@ export interface MappedBill {
   payments: Array<Payment>;
   totalAmount?: number;
   tenderedAmount?: number;
+  display?: string;
 }
 
 interface LocationLink {
@@ -152,3 +153,15 @@ export interface FacilityDetail {
   uuid: string;
   display: string;
 }
+
+export type ServiceConcept = {
+  concept: {
+    uuid: string;
+    display: string;
+  };
+  conceptName: {
+    uuid: string;
+    display: string;
+  };
+  display: string;
+};
