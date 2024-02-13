@@ -13,7 +13,6 @@ import { processBillPayment } from '../../billing.resource';
 import { InvoiceBreakDown } from './invoice-breakdown/invoice-breakdown.component';
 import PaymentHistory from './payment-history/payment-history.component';
 import PaymentForm from './payment-form/payment-form.component';
-import { updateBillVisitAttribute } from './payment.resource';
 import styles from './payments.scss';
 
 type PaymentProps = {
@@ -63,7 +62,7 @@ const Payments: React.FC<PaymentProps> = ({ bill, selectedLineItems }) => {
     });
 
   const handleProcessPayment = () => {
-    const paymentPayload = createPaymentPayload(bill, bill.patientUuid, formValues, amountDue);
+    const paymentPayload = createPaymentPayload(bill, bill.patientUuid, formValues, amountDue, selectedLineItems);
     processBillPayment(paymentPayload, bill.uuid).then(
       () => {
         showSnackbar({
@@ -72,7 +71,6 @@ const Payments: React.FC<PaymentProps> = ({ bill, selectedLineItems }) => {
           kind: 'success',
           timeoutInMs: 3000,
         });
-        updateBillVisitAttribute(currentVisit);
         handleNavigateToBillingDashboard();
       },
       (error) => {

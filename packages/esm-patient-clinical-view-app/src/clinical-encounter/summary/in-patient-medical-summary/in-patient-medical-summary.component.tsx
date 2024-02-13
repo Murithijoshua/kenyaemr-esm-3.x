@@ -7,7 +7,7 @@ import { useClinicalEncounter } from '../../../hooks/useClinicalEncounter';
 import { ConfigObject } from '../../../config-schema';
 import SummaryCard from '../summary-card.component';
 
-import styles from '../../in-patient-department/in-patient.scss';
+import styles from '../../dashboard/in-patient.scss';
 
 interface InPatientSummaryProps {
   patientUuid: string;
@@ -69,7 +69,6 @@ const InPatientSummary: React.FC<InPatientSummaryProps> = ({ patientUuid }) => {
     <>
       <div className={styles.cardContainer}>
         <SummaryCard title="Diagnosis on Admission" value={tableRows[0]?.bloodGroup} />
-        <SummaryCard title={t('chronicIllness', 'Chronic Illness')} value={tableRows[0]?.foetalPresentation} />
         <SummaryCard title={t('therapiesPrescribed', 'Therapies Prescribed')} value={tableRows[0]?.maternalCondition} />
         <SummaryCard
           title={t('recommendedProcedure', 'Recommended Procedure')}

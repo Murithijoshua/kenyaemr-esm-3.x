@@ -18,12 +18,14 @@ import {
   TableExpandedRow,
   Button,
 } from '@carbon/react';
+import { Add } from '@carbon/react/icons';
 import { isDesktop, useLayoutType, usePagination } from '@openmrs/esm-framework';
 import {
   EmptyDataIllustration,
   ErrorState,
   usePaginationInfo,
   launchPatientWorkspace,
+  CardHeader,
 } from '@openmrs/esm-patient-common-lib';
 import { useBills } from '../billing.resource';
 import InvoiceTable from '../invoice/invoice-table.component';
@@ -33,14 +35,14 @@ interface BillHistoryProps {
   patientUuid: string;
 }
 
-const PAGE_SIZE = 10;
 const BillHistory: React.FC<BillHistoryProps> = ({ patientUuid }) => {
   const { t } = useTranslation();
   const { bills, isLoading, error } = useBills(patientUuid);
   const layout = useLayoutType();
+  const [pageSize, setPageSize] = React.useState(10);
   const responsiveSize = isDesktop(layout) ? 'sm' : 'lg';
-  const { paginated, goTo, results, currentPage } = usePagination(bills, PAGE_SIZE);
-  const { pageSizes } = usePaginationInfo(PAGE_SIZE, bills?.length, currentPage, results?.length);
+  const { paginated, goTo, results, currentPage } = usePagination(bills, pageSize);
+  const { pageSizes } = usePaginationInfo(pageSize, bills?.length, currentPage, results?.length);
 
   const headerData = [
     {
@@ -62,7 +64,10 @@ const BillHistory: React.FC<BillHistoryProps> = ({ patientUuid }) => {
   ];
 
   const setBilledItems = (bill) =>
-    bill.lineItems.reduce((acc, item) => acc + (acc ? ' & ' : '') + (item.billableService || item.item || ''), '');
+    bill.lineItems.reduce(
+      (acc, item) => acc + (acc ? ' & ' : '') + (item.billableService?.split(':')[1] || item.item?.split(':')[1] || ''),
+      '',
+    );
 
   const rowData = results?.map((bill) => ({
     id: bill.uuid,
@@ -114,7 +119,14 @@ const BillHistory: React.FC<BillHistoryProps> = ({ patientUuid }) => {
 
   return (
     <div>
-      <p className={styles.billingHeading}>Billing History</p>
+      <CardHeader title={t('billingHistory', 'Billing History')}>
+        <Button
+          renderIcon={Add}
+          onClick={() => launchPatientWorkspace('billing-form', { workspaceTitle: 'Billing Form' })}
+          kind="ghost">
+          {t('addBill', 'Add bill item(s)')}
+        </Button>
+      </CardHeader>
       <div className={styles.billHistoryContainer}>
         <DataTable isSortable rows={rowData} headers={headerData} size={responsiveSize} useZebraStyles>
           {({
@@ -175,15 +187,16 @@ const BillHistory: React.FC<BillHistoryProps> = ({ patientUuid }) => {
             forwardText={t('nextPage', 'Next page')}
             backwardText={t('previousPage', 'Previous page')}
             page={currentPage}
-            pageSize={PAGE_SIZE}
+            pageSize={pageSize}
             pageSizes={pageSizes}
             totalItems={bills.length}
             className={styles.pagination}
             size={responsiveSize}
-            onChange={({ page: newPage }) => {
+            onChange={({ page: newPage, pageSize }) => {
               if (newPage !== currentPage) {
                 goTo(newPage);
               }
+              setPageSize(pageSize);
             }}
           />
         )}

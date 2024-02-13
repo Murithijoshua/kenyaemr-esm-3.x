@@ -2,15 +2,18 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { formatDate, parseDate, useConfig } from '@openmrs/esm-framework';
 import {
-  Contacted_UUID,
-  MissedAppointmentDate_UUID,
-  TracingNumber_UUID,
-  TracingOutcome_UUID,
-  TracingType_UUID,
+  Alcohol_Use_UUID,
+  Alcohol_Use_Duration_UUID,
+  Smoking_UUID,
+  Smoking_Duration_UUID,
+  Other_Substance_Abuse_UUID,
 } from '../../../utils/constants';
 import { getObsFromEncounter } from '../../../ui/encounter-list/encounter-list-utils';
-import { CardHeader, EmptyState, launchPatientWorkspace, ErrorState } from '@openmrs/esm-patient-common-lib';
+import { EmptyState, launchPatientWorkspace, ErrorState, CardHeader } from '@openmrs/esm-patient-common-lib';
 import {
+  OverflowMenu,
+  OverflowMenuItem,
+  InlineLoading,
   Button,
   DataTable,
   TableContainer,
@@ -20,37 +23,32 @@ import {
   TableHeader,
   TableBody,
   TableCell,
-  OverflowMenu,
-  OverflowMenuItem,
-  DataTableSkeleton,
 } from '@carbon/react';
-import { defaulterTracingEncounterUuid, usePatientTracing } from '../../../hooks/usePatientTracing';
+import { useClinicalEncounter } from '../../../hooks/useClinicalEncounter';
 import { ConfigObject } from '../../../config-schema';
 import { Add } from '@carbon/react/icons';
-interface PatientTracingProps {
+interface OutPatientSocialHistoryProps {
   patientUuid: string;
-  encounterTypeUuid: string;
-  formEntrySub: any;
-  launchPatientWorkspace: Function;
 }
 
-const DefaulterTracing: React.FC<PatientTracingProps> = ({ patientUuid, encounterTypeUuid }) => {
+const OutPatientSocialHistory: React.FC<OutPatientSocialHistoryProps> = ({ patientUuid }) => {
   const { t } = useTranslation();
   const {
-    formsList: { defaulterTracingFormUuid },
+    clinicalEncounterUuid,
+    formsList: { clinicalEncounterFormUuid },
   } = useConfig<ConfigObject>();
-  const headerTitle = t('defaulterTracing', 'Defaulter Tracing===');
-  const { encounters, isLoading, error, mutate, isValidating } = usePatientTracing(
+  const headerTitle = t('socialHistory', 'Social History');
+  const { encounters, isLoading, error, mutate, isValidating } = useClinicalEncounter(
     patientUuid,
-    defaulterTracingEncounterUuid,
+    clinicalEncounterUuid,
   );
-  const handleOpenOrEditDefaulterTracingForm = (encounterUUID = '') => {
+  const handleOpenOrEditClinicalEncounterForm = (encounterUUID = '') => {
     launchPatientWorkspace('patient-form-entry-workspace', {
-      workspaceTitle: 'Defaulter Tracing',
+      workspaceTitle: 'Social History',
       mutateForm: mutate,
       formInfo: {
         encounterUuid: encounterUUID,
-        formUuid: defaulterTracingFormUuid,
+        formUuid: clinicalEncounterFormUuid,
         patientUuid,
         visitTypeUuid: '',
         visitUuid: '',
@@ -59,52 +57,44 @@ const DefaulterTracing: React.FC<PatientTracingProps> = ({ patientUuid, encounte
   };
   const tableHeader = [
     {
-      key: 'missedAppointmentDate',
-      header: t('missedAppointmentDate', 'Date Missed Appointment'),
+      key: 'encounterDate',
+      header: t('encounterDate', 'Date'),
     },
     {
-      key: 'visitDate',
-      header: t('visitDate', 'Tracing Date'),
+      key: 'alcoholUse',
+      header: t('alcoholUse', 'Alcohol Use'),
     },
     {
-      key: 'tracingType',
-      header: t('tracingType', 'Tracing Type'),
+      key: 'alcoholUseDuration',
+      header: t('alcoholUseDuration', 'Alcohol Use Duration'),
     },
     {
-      key: 'tracingNumber',
-      header: t('tracingNumber', 'Tracing No.'),
+      key: 'smoking',
+      header: t('smoking', 'Smoking'),
     },
     {
-      key: 'contacted',
-      header: t('contacted', 'Contacted'),
+      key: 'smokingDuration',
+      header: t('smokingDuration', 'Smoking Duration'),
     },
     {
-      key: 'finalOutcome',
-      header: t('finalOutcome', 'Final Outcome'),
-    },
-    {
-      key: 'actions',
-      header: t('actions', 'Actions'),
+      key: 'otherSubstanceAbuse',
+      header: t('otherSubstanceAbuse', 'Other Substance Abuse'),
     },
   ];
 
-  const tableRows = encounters.map((encounter, index) => {
+  const tableRows = encounters?.map((encounter, index) => {
     return {
       id: `${encounter.uuid}`,
-      missedAppointmentDate:
-        getObsFromEncounter(encounter, MissedAppointmentDate_UUID) == '--' ||
-        getObsFromEncounter(encounter, MissedAppointmentDate_UUID) == null
-          ? formatDate(parseDate(encounter.encounterDatetime))
-          : formatDate(parseDate(getObsFromEncounter(encounter, MissedAppointmentDate_UUID))),
-      visitDate: formatDate(new Date(encounter.encounterDatetime)),
-      tracingType: getObsFromEncounter(encounter, TracingType_UUID),
-      tracingNumber: getObsFromEncounter(encounter, TracingNumber_UUID),
-      contacted: getObsFromEncounter(encounter, Contacted_UUID),
-      finalOutcome: getObsFromEncounter(encounter, TracingOutcome_UUID),
+      encounterDate: formatDate(new Date(encounter.encounterDatetime)),
+      alcoholUse: getObsFromEncounter(encounter, Alcohol_Use_UUID),
+      alcoholUseDuration: getObsFromEncounter(encounter, Alcohol_Use_Duration_UUID),
+      smoking: getObsFromEncounter(encounter, Smoking_UUID),
+      smokingDuration: getObsFromEncounter(encounter, Smoking_Duration_UUID),
+      otherSubstanceAbuse: getObsFromEncounter(encounter, Other_Substance_Abuse_UUID),
       actions: (
         <OverflowMenu aria-label="overflow-menu" flipped="false">
           <OverflowMenuItem
-            onClick={() => handleOpenOrEditDefaulterTracingForm(encounter.uuid)}
+            onClick={() => handleOpenOrEditClinicalEncounterForm(encounter.uuid)}
             itemText={t('edit', 'Edit')}
           />
           <OverflowMenuItem itemText={t('delete', 'Delete')} isDelete />
@@ -112,19 +102,18 @@ const DefaulterTracing: React.FC<PatientTracingProps> = ({ patientUuid, encounte
       ),
     };
   });
-
   if (isLoading) {
-    return <DataTableSkeleton headers={tableHeader} aria-label="Defaulter Tracing" />;
+    return <InlineLoading status="active" iconDescription="Loading" description="Loading data..." />;
   }
   if (error) {
-    return <ErrorState error={error} headerTitle={t('defaulterTracing', 'Defaulter Tracing')} />;
+    return <ErrorState error={error} headerTitle={t('socialHistory', 'Social History')} />;
   }
   if (encounters.length === 0) {
     return (
       <EmptyState
-        displayText={t('defaulterTracing', 'Defaulter Tracing')}
-        headerTitle={t('defaulterTracing', 'Defaulter Tracing')}
-        launchForm={handleOpenOrEditDefaulterTracingForm}
+        displayText={t('clinicalEncounter', 'Clinical Encounter')}
+        headerTitle={t('socialHistory', 'Social History')}
+        launchForm={handleOpenOrEditClinicalEncounterForm}
       />
     );
   }
@@ -134,7 +123,7 @@ const DefaulterTracing: React.FC<PatientTracingProps> = ({ patientUuid, encounte
         <Button
           size="md"
           kind="ghost"
-          onClick={() => handleOpenOrEditDefaulterTracingForm()}
+          onClick={() => handleOpenOrEditClinicalEncounterForm()}
           renderIcon={(props) => <Add size={24} {...props} />}
           iconDescription="Add">
           {t('add', 'Add')}
@@ -180,4 +169,4 @@ const DefaulterTracing: React.FC<PatientTracingProps> = ({ patientUuid, encounte
     </>
   );
 };
-export default DefaulterTracing;
+export default OutPatientSocialHistory;
