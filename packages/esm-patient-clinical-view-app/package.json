@@ -1,6 +1,6 @@
 {
   "name": "@kenyaemr/esm-patient-clinical-view-app",
-  "version": "5.1.0",
+  "version": "5.1.1",
   "description": "Patient clinical view microfrontend for the OpenMRS SPA",
   "browser": "dist/kenyaemr-esm-patient-clinical-view-app.js",
   "main": "src/index.ts",
@@ -42,13 +42,11 @@
   },
   "peerDependencies": {
     "@openmrs/esm-framework": "5.x",
-    "@openmrs/esm-patient-common-lib": "6.x",
     "react": "^18.1.0",
     "react-i18next": "11.x",
     "react-router-dom": "6.x"
   },
   "devDependencies": {
-    "@openmrs/esm-patient-common-lib": "next",
     "webpack": "^5.74.0"
   }
 }

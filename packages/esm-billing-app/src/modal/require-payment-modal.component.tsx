@@ -15,26 +15,39 @@ import {
 import styles from './require-payment.scss';
 import { useBills } from '../billing.resource';
 import { convertToCurrency, extractString } from '../helpers';
+import { useConfig } from '@openmrs/esm-framework';
+import { BillingConfig } from '../config-schema';
 
 type RequirePaymentModalProps = {
+  cancel: () => void;
   closeModal: () => void;
   patientUuid: string;
 };
 
-const RequirePaymentModal: React.FC<RequirePaymentModalProps> = ({ closeModal, patientUuid }) => {
+const RequirePaymentModal: React.FC<RequirePaymentModalProps> = ({ closeModal, patientUuid, cancel }) => {
   const { t } = useTranslation();
-  const { bills, isLoading, error } = useBills(patientUuid);
+  const { bills, isLoading } = useBills(patientUuid);
+  const { enforceBillPayment } = useConfig<BillingConfig>();
 
-  const lineItems = bills.filter((bill) => bill.status !== 'PAID').flatMap((bill) => bill.lineItems);
+  const closeButtonText = enforceBillPayment
+    ? t('navigateBack', 'Navigate back')
+    : t('proceedToCare', 'Proceed to care');
+
+  const handleCloseModal = () => {
+    enforceBillPayment ? cancel() : closeModal();
+  };
+
+  const lineItems = bills
+    .filter((bill) => bill.status !== 'PAID')
+    .flatMap((bill) => bill.lineItems)
+    .filter((lineItem) => lineItem.paymentStatus !== 'EXEMPTED');
+
   return (
     <div>
       <ModalHeader closeModal={closeModal} title={t('patientBillingAlert', 'Patient Billing Alert')} />
       <ModalBody>
         <p className={styles.bodyShort02}>
-          {t(
-            'billPaymentRequiredMessage',
-            'The current patient has pending bill. Advice patient to settle bill before receiving services',
-          )}
+          {t('billPaymentRequiredMessage', 'The current patient has pending bill. Advice patient to settle bill.')}
         </p>
         {isLoading && (
           <InlineLoading
@@ -65,13 +78,19 @@ const RequirePaymentModal: React.FC<RequirePaymentModalProps> = ({ closeModal, p
             })}
           </StructuredListBody>
         </StructuredListWrapper>
+        <p className={styles.providerMessage}>
+          {t(
+            'providerMessage',
+            'By clicking Proceed to care, you acknowledge that you have advised the patient to settle the bill.',
+          )}
+        </p>
       </ModalBody>
       <ModalFooter>
-        <Button kind="secondary" onClick={closeModal}>
+        <Button kind="secondary" onClick={cancel}>
           {t('cancel', 'Cancel')}
         </Button>
-        <Button kind="primary" onClick={closeModal}>
-          {t('ok', 'OK')}
+        <Button kind="danger" onClick={handleCloseModal}>
+          {closeButtonText}
         </Button>
       </ModalFooter>
     </div>

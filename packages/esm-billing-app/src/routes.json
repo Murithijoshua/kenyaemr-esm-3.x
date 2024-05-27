@@ -7,6 +7,12 @@
     {
       "component": "billableServicesHome",
       "route":"billable-services"
+    },
+    {
+      "component": "billingPrompt",
+      "routeRegex": "^patient\/.+\/chart",
+      "online": true,
+      "offline": false
     }
   ],
   "extensions": [
@@ -47,8 +53,8 @@
       }
     },
     {
-      "name": "billing-checkin-form",
-      "slot": "billing-checkin-slot",
+      "name": "billing-check-in-form",
+      "slot": "extra-visit-attribute-slot",
       "component": "billingCheckInForm"
     },
     {
@@ -69,6 +75,20 @@
       "component": "visitAttributeTags",
       "slot": "patient-banner-tags-slot",
       "order": 2
+    },
+    {
+      "name": "initiate-payment-modal",
+      "component": "initiatePaymentDialog"
+    },
+    {
+      "name": "lab-order-billable-item",
+      "component": "labOrder",
+      "slot": "top-of-lab-order-form-slot"
+    },
+    {
+      "name": "drug-order-billable-item",
+      "component": "drugOrder",
+      "slot": "medication-info-slot"
     }
   ]
 }

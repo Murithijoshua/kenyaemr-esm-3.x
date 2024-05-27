@@ -1,9 +1,9 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { formatDate, useConfig } from '@openmrs/esm-framework';
+import { formatDate, launchWorkspace, useConfig } from '@openmrs/esm-framework';
 import { SURGICAL_HISTORY_UUID, ACCIDENT_TRAUMA_UUID, BLOOD_TRANSFUSION_UUID } from '../../../utils/constants';
 import { getObsFromEncounter } from '../../../ui/encounter-list/encounter-list-utils';
-import { EmptyState, launchPatientWorkspace, ErrorState, CardHeader } from '@openmrs/esm-patient-common-lib';
+import { EmptyState, ErrorState, CardHeader } from '@openmrs/esm-patient-common-lib';
 import {
   OverflowMenu,
   OverflowMenuItem,
@@ -18,29 +18,40 @@ import {
   TableBody,
   TableCell,
 } from '@carbon/react';
-import { useClinicalEncounter } from '../../../hooks/useClinicalEncounter';
 import { ConfigObject } from '../../../config-schema';
 
 import { Add } from '@carbon/react/icons';
+import { OpenmrsEncounter } from '../../../types';
+import { KeyedMutator, mutate } from 'swr';
 interface OutPatientMedicalHistoryProps {
   patientUuid: string;
+  encounters: OpenmrsEncounter[];
+  isLoading: boolean;
+  error: Error;
+  isValidating: boolean;
+  mutate: KeyedMutator<any>;
 }
-
-const OutPatientMedicalHistory: React.FC<OutPatientMedicalHistoryProps> = ({ patientUuid }) => {
+const OutPatientMedicalHistory: React.FC<OutPatientMedicalHistoryProps> = ({
+  patientUuid,
+  encounters,
+  isLoading,
+  error,
+}) => {
   const { t } = useTranslation();
   const {
-    clinicalEncounterUuid,
     formsList: { clinicalEncounterFormUuid },
   } = useConfig<ConfigObject>();
   const headerTitle = t('medicalHistory', 'Medical History');
-  const { encounters, isLoading, error, mutate, isValidating } = useClinicalEncounter(
-    patientUuid,
-    clinicalEncounterUuid,
-  );
   const handleOpenOrEditClinicalEncounterForm = (encounterUUID = '') => {
-    launchPatientWorkspace('patient-form-entry-workspace', {
+    launchWorkspace('patient-form-entry-workspace', {
       workspaceTitle: 'Medical History',
-      mutateForm: mutate,
+      mutateForm: mutate(
+        (key) => typeof key === 'string' && key.startsWith('/openmrs/ws/rest/v1/kenyaemr/flags'),
+        undefined,
+        {
+          revalidate: true,
+        },
+      ),
       formInfo: {
         encounterUuid: encounterUUID,
         formUuid: clinicalEncounterFormUuid,
@@ -72,25 +83,39 @@ const OutPatientMedicalHistory: React.FC<OutPatientMedicalHistoryProps> = ({ pat
       header: t('finalDiagnosis', 'Final Diagnosis'),
     },
   ];
-  const tableRows = encounters?.map((encounter, index) => {
-    return {
-      id: `${encounter.uuid}`,
-      encounterDate: formatDate(new Date(encounter.encounterDatetime)),
-      surgicalHistory: getObsFromEncounter(encounter, SURGICAL_HISTORY_UUID),
-      bloodTransfusion: getObsFromEncounter(encounter, BLOOD_TRANSFUSION_UUID),
-      accidentOrTrauma: getObsFromEncounter(encounter, ACCIDENT_TRAUMA_UUID),
-      finalDiagnosis: encounter.diagnoses.length > 0 ? encounter.diagnoses[0].diagnosis.coded.display : '--',
-      actions: (
-        <OverflowMenu aria-label="overflow-menu" flipped="false">
-          <OverflowMenuItem
-            onClick={() => handleOpenOrEditClinicalEncounterForm(encounter.uuid)}
-            itemText={t('edit', 'Edit')}
-          />
-          <OverflowMenuItem itemText={t('delete', 'Delete')} isDelete />
-        </OverflowMenu>
-      ),
-    };
-  });
+  const tableRows = encounters
+    ?.map((encounter, index) => {
+      const allFieldsNull = () => {
+        return (
+          getObsFromEncounter(encounter, SURGICAL_HISTORY_UUID) === '--' &&
+          getObsFromEncounter(encounter, BLOOD_TRANSFUSION_UUID) === '--' &&
+          getObsFromEncounter(encounter, ACCIDENT_TRAUMA_UUID) === '--' &&
+          encounter.diagnoses.length === 0 &&
+          encounter.encounterDatetime !== null
+        );
+      };
+      if (allFieldsNull()) {
+        return null;
+      }
+      return {
+        id: `${encounter.uuid}`,
+        encounterDate: formatDate(new Date(encounter.encounterDatetime)),
+        surgicalHistory: getObsFromEncounter(encounter, SURGICAL_HISTORY_UUID),
+        bloodTransfusion: getObsFromEncounter(encounter, BLOOD_TRANSFUSION_UUID),
+        accidentOrTrauma: getObsFromEncounter(encounter, ACCIDENT_TRAUMA_UUID),
+        finalDiagnosis: encounter.diagnoses.length > 0 ? encounter.diagnoses[0].diagnosis.coded.display : '--',
+        actions: (
+          <OverflowMenu aria-label="overflow-menu" flipped="false">
+            <OverflowMenuItem
+              onClick={() => handleOpenOrEditClinicalEncounterForm(encounter.uuid)}
+              itemText={t('edit', 'Edit')}
+            />
+            <OverflowMenuItem itemText={t('delete', 'Delete')} isDelete />
+          </OverflowMenu>
+        ),
+      };
+    })
+    .filter((row) => row !== null);
   if (isLoading) {
     return <InlineLoading status="active" iconDescription="Loading" description="Loading data..." />;
   }

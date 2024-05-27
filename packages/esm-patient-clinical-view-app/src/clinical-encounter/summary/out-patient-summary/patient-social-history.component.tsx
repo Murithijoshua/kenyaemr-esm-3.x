@@ -24,28 +24,43 @@ import {
   TableBody,
   TableCell,
 } from '@carbon/react';
-import { useClinicalEncounter } from '../../../hooks/useClinicalEncounter';
 import { ConfigObject } from '../../../config-schema';
 import { Add } from '@carbon/react/icons';
+import { OpenmrsEncounter } from '../../../types';
+import { KeyedMutator, mutate } from 'swr';
 interface OutPatientSocialHistoryProps {
   patientUuid: string;
+  encounters: OpenmrsEncounter[];
+  isLoading: boolean;
+  error: Error;
+  isValidating: boolean;
+  mutate: KeyedMutator<any>;
 }
 
-const OutPatientSocialHistory: React.FC<OutPatientSocialHistoryProps> = ({ patientUuid }) => {
+const OutPatientSocialHistory: React.FC<OutPatientSocialHistoryProps> = ({
+  patientUuid,
+  encounters,
+  isLoading,
+  error,
+  isValidating,
+}) => {
   const { t } = useTranslation();
   const {
     clinicalEncounterUuid,
     formsList: { clinicalEncounterFormUuid },
   } = useConfig<ConfigObject>();
+
   const headerTitle = t('socialHistory', 'Social History');
-  const { encounters, isLoading, error, mutate, isValidating } = useClinicalEncounter(
-    patientUuid,
-    clinicalEncounterUuid,
-  );
   const handleOpenOrEditClinicalEncounterForm = (encounterUUID = '') => {
     launchPatientWorkspace('patient-form-entry-workspace', {
       workspaceTitle: 'Social History',
-      mutateForm: mutate,
+      mutateForm: mutate(
+        (key) => typeof key === 'string' && key.startsWith('/openmrs/ws/rest/v1/kenyaemr/flags'),
+        undefined,
+        {
+          revalidate: true,
+        },
+      ),
       formInfo: {
         encounterUuid: encounterUUID,
         formUuid: clinicalEncounterFormUuid,
@@ -81,27 +96,41 @@ const OutPatientSocialHistory: React.FC<OutPatientSocialHistoryProps> = ({ patie
       header: t('otherSubstanceAbuse', 'Other Substance Abuse'),
     },
   ];
-
-  const tableRows = encounters?.map((encounter, index) => {
-    return {
-      id: `${encounter.uuid}`,
-      encounterDate: formatDate(new Date(encounter.encounterDatetime)),
-      alcoholUse: getObsFromEncounter(encounter, Alcohol_Use_UUID),
-      alcoholUseDuration: getObsFromEncounter(encounter, Alcohol_Use_Duration_UUID),
-      smoking: getObsFromEncounter(encounter, Smoking_UUID),
-      smokingDuration: getObsFromEncounter(encounter, Smoking_Duration_UUID),
-      otherSubstanceAbuse: getObsFromEncounter(encounter, Other_Substance_Abuse_UUID),
-      actions: (
-        <OverflowMenu aria-label="overflow-menu" flipped="false">
-          <OverflowMenuItem
-            onClick={() => handleOpenOrEditClinicalEncounterForm(encounter.uuid)}
-            itemText={t('edit', 'Edit')}
-          />
-          <OverflowMenuItem itemText={t('delete', 'Delete')} isDelete />
-        </OverflowMenu>
-      ),
-    };
-  });
+  const tableRows = encounters
+    ?.map((encounter, index) => {
+      const allFieldsNull = () => {
+        return (
+          getObsFromEncounter(encounter, Alcohol_Use_UUID) === '--' &&
+          getObsFromEncounter(encounter, Alcohol_Use_Duration_UUID) === '--' &&
+          getObsFromEncounter(encounter, Smoking_UUID) === '--' &&
+          getObsFromEncounter(encounter, Smoking_Duration_UUID) === '--' &&
+          getObsFromEncounter(encounter, Other_Substance_Abuse_UUID) === '--' &&
+          encounter.encounterDatetime !== null
+        );
+      };
+      if (allFieldsNull()) {
+        return null;
+      }
+      return {
+        id: `${encounter.uuid}`,
+        encounterDate: formatDate(new Date(encounter.encounterDatetime)),
+        alcoholUse: getObsFromEncounter(encounter, Alcohol_Use_UUID),
+        alcoholUseDuration: getObsFromEncounter(encounter, Alcohol_Use_Duration_UUID),
+        smoking: getObsFromEncounter(encounter, Smoking_UUID),
+        smokingDuration: getObsFromEncounter(encounter, Smoking_Duration_UUID),
+        otherSubstanceAbuse: getObsFromEncounter(encounter, Other_Substance_Abuse_UUID),
+        actions: (
+          <OverflowMenu aria-label="overflow-menu" flipped="false">
+            <OverflowMenuItem
+              onClick={() => handleOpenOrEditClinicalEncounterForm(encounter.uuid)}
+              itemText={t('edit', 'Edit')}
+            />
+            <OverflowMenuItem itemText={t('delete', 'Delete')} isDelete />
+          </OverflowMenu>
+        ),
+      };
+    })
+    .filter((row) => row !== null);
   if (isLoading) {
     return <InlineLoading status="active" iconDescription="Loading" description="Loading data..." />;
   }

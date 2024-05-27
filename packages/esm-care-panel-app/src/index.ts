@@ -1,13 +1,13 @@
 import { defineConfigSchema, getSyncLifecycle, registerBreadcrumbs } from '@openmrs/esm-framework';
 import { configSchema } from './config-schema';
-import { dashboardMeta } from './dashboard.meta';
-import { createDashboardLink, registerWorkspace } from '@openmrs/esm-patient-common-lib';
+import { dashboardMeta, hivPatientSummaryDashboardMeta } from './dashboard.meta';
+import { createDashboardLink } from '@openmrs/esm-patient-common-lib';
 import carePanelComponent from './care-panel/care-panel.component';
-import carePanelPatientSummaryComponent from './patient-summary/patient-summary.component';
 import careProgramsComponent from './care-programs/care-programs.component';
 import deleteRegimenConfirmationDialogComponent from './regimen-editor/delete-regimen-modal.component';
 import regimenFormComponent from './regimen-editor/regimen-form.component';
 import CarePanelDashboard from './care-panel-dashboard/care-panel-dashboard.component';
+import PatientSummary from './patient-summary/patient-summary.component';
 
 const moduleName = '@kenyaemr/esm-care-panel-app';
 
@@ -34,19 +34,14 @@ export const patientCareProgram = getSyncLifecycle(careProgramsComponent, {
   featureName: 'care-programs',
 });
 
-registerWorkspace({
-  name: 'patient-regimen-workspace',
-
-  title: 'Regimen Form',
-  load: getSyncLifecycle(regimenFormComponent, options),
-  canMaximize: true,
-  canHide: true,
-  width: 'wider',
-  type: 'clinical-form',
-});
-
 // t('carePanel', 'Care panel')
 export const carePanelSummaryDashboardLink = getSyncLifecycle(
   createDashboardLink({ ...dashboardMeta, moduleName }),
   options,
 );
+export const hivPatientSummaryDashboardLink = getSyncLifecycle(
+  createDashboardLink({ ...hivPatientSummaryDashboardMeta, moduleName }),
+  options,
+);
+export const hivPatientSummary = getSyncLifecycle(PatientSummary, options);
+export const regimenFormWorkspace = getSyncLifecycle(regimenFormComponent, options);
