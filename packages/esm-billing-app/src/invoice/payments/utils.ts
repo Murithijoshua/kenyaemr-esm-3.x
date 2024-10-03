@@ -1,7 +1,6 @@
-import { LineItem, MappedBill } from '../../types';
-import { Payment } from './payments.component';
+import { FormPayment, LineItem, MappedBill } from '../../types';
 
-const hasLineItem = (lineItems: Array<LineItem>, item: LineItem) => {
+export const hasLineItem = (lineItems: Array<LineItem>, item: LineItem) => {
   if (lineItems?.length === 0) {
     return false;
   }
@@ -12,7 +11,7 @@ const hasLineItem = (lineItems: Array<LineItem>, item: LineItem) => {
 export const createPaymentPayload = (
   bill: MappedBill,
   patientUuid: string,
-  formValues: Array<Payment>,
+  formValues: Array<FormPayment>,
   amountDue: number,
   selectedLineItems: Array<LineItem>,
 ) => {
@@ -63,4 +62,22 @@ export const createPaymentPayload = (
   return processedPayment;
 };
 
-const processBillItem = (item) => (item.item || item.billableService)?.split(':')[0];
+export const processBillItem = (item: LineItem) => (item.item || item.billableService)?.split(':')[0];
+
+export function formatPhoneNumber(phone) {
+  let phone_ = phone.toString().replace(/\D/g, ''); // Convert to string first
+  const length = phone_.length;
+
+  let _phone = '';
+  if (length === 12 && phone_.substring(0, 3) === '254') {
+    _phone = phone_;
+  } else if (length === 9 && phone_.substring(0, 1) === '7') {
+    _phone = '254' + phone_;
+  } else if (length === 10 && phone_.substring(0, 1) === '0') {
+    _phone = '254' + phone_.substring(1, 10);
+  } else {
+    _phone = 'Invalid Phone Number ' + phone;
+  }
+
+  return _phone;
+}

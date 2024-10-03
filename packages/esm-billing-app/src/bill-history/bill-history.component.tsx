@@ -19,8 +19,15 @@ import {
   Button,
 } from '@carbon/react';
 import { Add } from '@carbon/react/icons';
-import { isDesktop, useLayoutType, usePagination, launchWorkspace } from '@openmrs/esm-framework';
-import { EmptyDataIllustration, ErrorState, usePaginationInfo, CardHeader } from '@openmrs/esm-patient-common-lib';
+import { isDesktop, useLayoutType, usePagination } from '@openmrs/esm-framework';
+import {
+  EmptyDataIllustration,
+  ErrorState,
+  usePaginationInfo,
+  CardHeader,
+  useLaunchWorkspaceRequiringVisit,
+  EmptyState,
+} from '@openmrs/esm-patient-common-lib';
 import { useBills } from '../billing.resource';
 import InvoiceTable from '../invoice/invoice-table.component';
 import styles from './bill-history.scss';
@@ -32,11 +39,16 @@ interface BillHistoryProps {
 const BillHistory: React.FC<BillHistoryProps> = ({ patientUuid }) => {
   const { t } = useTranslation();
   const { bills, isLoading, error } = useBills(patientUuid);
+  const launchPatientWorkspace = useLaunchWorkspaceRequiringVisit('billing-form');
   const layout = useLayoutType();
   const [pageSize, setPageSize] = React.useState(10);
   const responsiveSize = isDesktop(layout) ? 'sm' : 'lg';
   const { paginated, goTo, results, currentPage } = usePagination(bills, pageSize);
   const { pageSizes } = usePaginationInfo(pageSize, bills?.length, currentPage, results?.length);
+
+  const handleLaunchBillForm = () => {
+    launchPatientWorkspace({ workspaceTitle: t('billingForm', 'Billing Form') });
+  };
 
   const headerData = [
     {
@@ -58,7 +70,7 @@ const BillHistory: React.FC<BillHistoryProps> = ({ patientUuid }) => {
   ];
 
   const setBilledItems = (bill) =>
-    bill.lineItems.reduce(
+    bill.lineItems?.reduce(
       (acc, item) => acc + (acc ? ' & ' : '') + (item.billableService?.split(':')[1] || item.item?.split(':')[1] || ''),
       '',
     );
@@ -81,41 +93,23 @@ const BillHistory: React.FC<BillHistoryProps> = ({ patientUuid }) => {
   }
 
   if (error) {
-    return (
-      <div className={styles.errorContainer}>
-        <Layer>
-          <ErrorState error={error} headerTitle={t('billsList', 'Bill list')} />
-        </Layer>
-      </div>
-    );
+    return <ErrorState error={error} headerTitle={t('billsList', 'Bill list')} />;
   }
 
   if (bills.length === 0) {
     return (
-      <Layer className={styles.emptyStateContainer}>
-        <Tile className={styles.tile}>
-          <p className={styles.billingHeading} style={{ textAlign: 'left' }}>
-            Billing History
-          </p>
-          <div className={styles.illo}>
-            <EmptyDataIllustration />
-          </div>
-          <p className={styles.content}>There are no bills to display.</p>
-          <Button onClick={() => launchWorkspace('billing-form', { workspaceTitle: 'Billing Form' })} kind="ghost">
-            {t('launchBillForm', 'Launch bill form')}
-          </Button>
-        </Tile>
-      </Layer>
+      <EmptyState
+        displayText={'Patient Billing'}
+        headerTitle={t('patientBilling', 'Patient billing')}
+        launchForm={handleLaunchBillForm}
+      />
     );
   }
 
   return (
     <div>
-      <CardHeader title={t('billingHistory', 'Billing History')}>
-        <Button
-          renderIcon={Add}
-          onClick={() => launchWorkspace('billing-form', { workspaceTitle: 'Billing Form' })}
-          kind="ghost">
+      <CardHeader title={t('patientBilling', 'Patient billing')}>
+        <Button renderIcon={Add} onClick={handleLaunchBillForm} kind="ghost">
           {t('addBill', 'Add bill item(s)')}
         </Button>
       </CardHeader>

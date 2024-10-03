@@ -1,6 +1,19 @@
 export const dashboardMeta = {
   slot: 'patient-chart-billing-dashboard-slot',
   columns: 1,
-  title: 'Billing history',
-  path: 'Billing history',
+  title: 'Billing',
+  path: 'Billing',
+};
+
+export const shrSummaryDashboardMeta = {
+  slot: 'patient-chart-shr-summary-dashboard-slot',
+  columns: 1,
+  title: 'SHR Summary',
+  path: 'SHR Summary',
+};
+export const benefitsPackageDashboardMeta = {
+  slot: 'patient-chart-benefits-dashboard-slot',
+  columns: 2,
+  title: 'Benefits Package',
+  path: 'Benefits Package',
 };

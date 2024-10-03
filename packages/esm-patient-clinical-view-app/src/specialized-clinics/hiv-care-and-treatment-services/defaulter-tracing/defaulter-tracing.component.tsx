@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { formatDate, launchWorkspace, parseDate, useConfig } from '@openmrs/esm-framework';
+import { formatDate, parseDate, useConfig } from '@openmrs/esm-framework';
 import {
   Contacted_UUID,
   MissedAppointmentDate_UUID,
@@ -9,7 +9,7 @@ import {
   TracingType_UUID,
 } from '../../../utils/constants';
 import { getObsFromEncounter } from '../../../ui/encounter-list/encounter-list-utils';
-import { CardHeader, EmptyState, ErrorState } from '@openmrs/esm-patient-common-lib';
+import { CardHeader, EmptyState, ErrorState, launchPatientWorkspace } from '@openmrs/esm-patient-common-lib';
 import {
   Button,
   DataTable,
@@ -27,10 +27,9 @@ import {
 import { defaulterTracingEncounterUuid, usePatientTracing } from '../../../hooks/usePatientTracing';
 import { ConfigObject } from '../../../config-schema';
 import { Add } from '@carbon/react/icons';
+import styles from './defaulter-tracing.scss';
 interface PatientTracingProps {
   patientUuid: string;
-  encounterTypeUuid: string;
-  formEntrySub: any;
 }
 
 const DefaulterTracing: React.FC<PatientTracingProps> = ({ patientUuid }) => {
@@ -44,9 +43,9 @@ const DefaulterTracing: React.FC<PatientTracingProps> = ({ patientUuid }) => {
     defaulterTracingEncounterUuid,
   );
   const handleOpenOrEditDefaulterTracingForm = (encounterUUID = '') => {
-    launchWorkspace('patient-form-entry-workspace', {
+    launchPatientWorkspace('patient-form-entry-workspace', {
       workspaceTitle: 'Defaulter Tracing',
-      mutateForm: mutate,
+      mutateForm: () => mutate(),
       formInfo: {
         encounterUuid: encounterUUID,
         formUuid: defaulterTracingFormUuid,
@@ -81,10 +80,6 @@ const DefaulterTracing: React.FC<PatientTracingProps> = ({ patientUuid }) => {
       key: 'finalOutcome',
       header: t('finalOutcome', 'Final Outcome'),
     },
-    {
-      key: 'actions',
-      header: t('actions', 'Actions'),
-    },
   ];
 
   const tableRows = encounters.map((encounter, index) => {
@@ -100,15 +95,6 @@ const DefaulterTracing: React.FC<PatientTracingProps> = ({ patientUuid }) => {
       tracingNumber: getObsFromEncounter(encounter, TracingNumber_UUID),
       contacted: getObsFromEncounter(encounter, Contacted_UUID),
       finalOutcome: getObsFromEncounter(encounter, TracingOutcome_UUID),
-      actions: (
-        <OverflowMenu aria-label="overflow-menu" flipped="false">
-          <OverflowMenuItem
-            onClick={() => handleOpenOrEditDefaulterTracingForm(encounter.uuid)}
-            itemText={t('edit', 'Edit')}
-          />
-          <OverflowMenuItem itemText={t('delete', 'Delete')} isDelete />
-        </OverflowMenu>
-      ),
     };
   });
 
@@ -128,7 +114,7 @@ const DefaulterTracing: React.FC<PatientTracingProps> = ({ patientUuid }) => {
     );
   }
   return (
-    <>
+    <div className={styles.widgetCard}>
       <CardHeader title={headerTitle}>
         <Button
           size="md"
@@ -140,12 +126,13 @@ const DefaulterTracing: React.FC<PatientTracingProps> = ({ patientUuid }) => {
         </Button>
       </CardHeader>
       <DataTable
+        useZebraStyles
         size="sm"
         rows={tableRows}
         headers={tableHeader}
         render={({ rows, headers, getHeaderProps, getRowProps, getTableProps, getTableContainerProps }) => (
           <TableContainer size="sm" {...getTableContainerProps()}>
-            <Table size="sm" {...getTableProps()} aria-label="sample table">
+            <Table size="sm" {...getTableProps()} aria-label={t('defaulterTracing', 'Defaulter tracing')}>
               <TableHead>
                 <TableRow>
                   {headers.map((header, i) => (
@@ -157,10 +144,11 @@ const DefaulterTracing: React.FC<PatientTracingProps> = ({ patientUuid }) => {
                       {header.header}
                     </TableHeader>
                   ))}
+                  <TableHeader aria-label="overflow actions" />
                 </TableRow>
               </TableHead>
               <TableBody>
-                {rows.map((row) => (
+                {rows.map((row, index) => (
                   <TableRow
                     key={row.id}
                     {...getRowProps({
@@ -169,6 +157,14 @@ const DefaulterTracing: React.FC<PatientTracingProps> = ({ patientUuid }) => {
                     {row.cells.map((cell) => (
                       <TableCell key={cell.id}>{cell.value}</TableCell>
                     ))}
+                    <TableCell className="cds--table-column-menu">
+                      <OverflowMenu aria-label="overflow-menu" flipped="false">
+                        <OverflowMenuItem
+                          onClick={() => handleOpenOrEditDefaulterTracingForm(encounters[index]?.uuid)}
+                          itemText={t('edit', 'Edit')}
+                        />
+                      </OverflowMenu>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -176,7 +172,7 @@ const DefaulterTracing: React.FC<PatientTracingProps> = ({ patientUuid }) => {
           </TableContainer>
         )}
       />
-    </>
+    </div>
   );
 };
 export default DefaulterTracing;

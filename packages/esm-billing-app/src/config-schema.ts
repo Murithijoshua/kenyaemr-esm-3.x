@@ -9,12 +9,34 @@ export interface BillingConfig {
     exemptionCategory: string;
     billPaymentStatus: string;
   };
+  inPatientVisitTypeUuid: string;
   patientExemptionCategories: Array<{ value: string; label: string }>;
   excludedPaymentMode: Array<{ uuid: string; label: string }>;
   enforceBillPayment: boolean;
+  billingStatusQueryUrl: string;
+  mpesaAPIBaseUrl: string;
+  insuranceSchemes: Array<string>;
+  nationalPatientUniqueIdentifierTypeUuid: string;
+  cashPointUuid: string;
+  cashierUuid: string;
 }
 
 export const configSchema = {
+  nationalPatientUniqueIdentifierTypeUuid: {
+    _type: Type.String,
+    _description: 'The national unique patient identifier',
+    _default: 'f85081e2-b4be-4e48-b3a4-7994b69bb101',
+  },
+  inPatientVisitTypeUuid: {
+    _type: Type.String,
+    _description: 'The visit type uuid for in-patient',
+    _default: 'a73e2ac6-263b-47fc-99fc-e0f2c09fc914',
+  },
+  mpesaAPIBaseUrl: {
+    _type: Type.String,
+    _description: 'The base url that will be used to make any backend calls related to mpesa.',
+    _default: 'https://billing.kenyahmis.org',
+  },
   visitAttributeTypes: {
     isPatientExempted: {
       _type: Type.String,
@@ -51,7 +73,7 @@ export const configSchema = {
     _type: Type.Array,
     _elements: {
       value: {
-        _type: Type.UUID,
+        _type: Type.String,
         _description: 'The value of the exemption category',
       },
       label: {
@@ -75,11 +97,39 @@ export const configSchema = {
         _description: 'The label of the payment mode to be excluded',
       },
     },
-    _default: [],
+    _default: [
+      {
+        uuid: 'eb6173cb-9678-4614-bbe1-0ccf7ed9d1d4',
+        label: 'Waiver',
+      },
+    ],
   },
   enforceBillPayment: {
     _type: Type.Boolean,
     _default: true,
     _description: 'Whether to enforce bill payment or not for patient to receive service',
+  },
+  billingStatusQueryUrl: {
+    _type: Type.String,
+    _default: '${restBaseUrl}/cashier/billLineItem?orderUuid=${orderUuid}&v=full',
+    _description: 'URL to query billing status',
+  },
+  insuranceSchemes: {
+    _type: Type.Array,
+    _elements: {
+      _type: Type.String,
+    },
+    _default: ['(SHA) SHIF', 'NHIF', 'NHIF (Linda Mama)', 'Jubilee Insurance', 'AAR Insurance', 'Old Mutual Insurance'],
+    _description: 'List of insurance schemes',
+  },
+  cashPointUuid: {
+    _type: Type.String,
+    _description: 'Where bill is generated from',
+    _default: '54065383-b4d4-42d2-af4d-d250a1fd2590',
+  },
+  cashierUuid: {
+    _type: Type.String,
+    _description: 'Who Generated the bill',
+    _default: '54065383-b4d4-42d2-af4d-d250a1fd2590',
   },
 };

@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.openmrs.org/routes.schema.json",
   "backendDependencies": {
-    "kenyaemr": "^18.2.0"
+    "kenyaemr": "^19.0.0"
   },
   "pages": [],
   "extensions": [
@@ -12,13 +12,6 @@
       "order": 0,
       "online": true,
       "offline": false
-    },
-    {
-      "name": "kenyaemr-2.x-chart-link",
-      "slot": "visit-header-right-slot",
-      "component": "kenyaemr2ChartLink",
-      "online": true,
-      "offline": true
     },
     {
       "name": "kenyaemr-module-links",

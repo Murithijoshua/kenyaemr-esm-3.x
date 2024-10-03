@@ -1,11 +1,38 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, Form, ModalBody, ModalHeader, TextInput, Layer } from '@carbon/react';
+import {
+  Button,
+  Form,
+  ModalBody,
+  ModalHeader,
+  TextInput,
+  Layer,
+  InlineNotification,
+  Loading,
+  NumberInputSkeleton,
+} from '@carbon/react';
 import styles from './initiate-payment.scss';
-import { Controller, useForm } from 'react-hook-form';
+import { Controller, SubmitHandler, useForm } from 'react-hook-form';
 import { MappedBill } from '../../../types';
-import { initiateStkPush } from '../payment.resource';
-import { showSnackbar } from '@openmrs/esm-framework';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { formatPhoneNumber } from '../utils';
+import { useSystemSetting } from '../../../hooks/getMflCode';
+import { initiateStkPush } from '../../../m-pesa/mpesa-resource';
+import { useRequestStatus } from '../../../hooks/useRequestStatus';
+import { useConfig } from '@openmrs/esm-framework';
+import { BillingConfig } from '../../../config-schema';
+import { usePatientAttributes } from '../../../hooks/usePatientAttributes';
+
+const initiatePaymentSchema = z.object({
+  phoneNumber: z
+    .string()
+    .nonempty({ message: 'Phone number is required' })
+    .regex(/^\d{10}$/, { message: 'Phone number must be numeric and 10 digits' }),
+  billAmount: z.string().nonempty({ message: 'Amount is required' }),
+});
+
+type FormData = z.infer<typeof initiatePaymentSchema>;
 
 export interface InitiatePaymentDialogProps {
   closeModal: () => void;
@@ -14,70 +41,86 @@ export interface InitiatePaymentDialogProps {
 
 const InitiatePaymentDialog: React.FC<InitiatePaymentDialogProps> = ({ closeModal, bill }) => {
   const { t } = useTranslation();
+  const { phoneNumber, isLoading: isLoadingPhoneNumber } = usePatientAttributes(bill.patientUuid);
+  const { mpesaAPIBaseUrl } = useConfig<BillingConfig>();
+  const { mflCodeValue } = useSystemSetting('facility.mflcode');
+  const [notification, setNotification] = useState<{ type: 'error' | 'success'; message: string } | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [{ requestStatus }, pollingTrigger] = useRequestStatus(setNotification, closeModal, bill);
 
   const {
     control,
     handleSubmit,
-    formState: { errors },
-  } = useForm<any>({
+    formState: { errors, isValid },
+    setValue,
+    watch,
+    reset,
+  } = useForm<FormData>({
     mode: 'all',
-    defaultValues: {},
+    defaultValues: { billAmount: String(bill.totalAmount), phoneNumber: phoneNumber },
+    resolver: zodResolver(initiatePaymentSchema),
   });
 
-  const onSubmit = (data) => {
+  const watchedPhoneNumber = watch('phoneNumber');
+
+  useEffect(() => {
+    if (!watchedPhoneNumber && phoneNumber) {
+      reset({ phoneNumber: watchedPhoneNumber });
+    }
+  }, [watchedPhoneNumber, setValue, phoneNumber, reset]);
+
+  const onSubmit: SubmitHandler<FormData> = async (data) => {
+    const phoneNumber = formatPhoneNumber(data.phoneNumber);
+    const amountBilled = data.billAmount;
+    const accountReference = `${mflCodeValue}#${bill.receiptNumber}`;
+
     const payload = {
-      phoneNumber: data.phoneNumber,
-      amount: data.billAmount,
-      billUuid: bill.uuid,
-      referenceNumber: bill.receiptNumber,
-      callBackUrl: 'https://756e-105-163-1-73.ngrok-free.app/api/confirmation-url/',
+      AccountReference: accountReference,
+      PhoneNumber: phoneNumber,
+      Amount: amountBilled,
     };
-    initiateStkPush(payload).then(
-      (resp) => {
-        showSnackbar({
-          title: t('stkPush', 'STK Push'),
-          subtitle: t('stkPushSucess', 'STK Push send successfully'),
-          kind: 'success',
-          timeoutInMs: 3500,
-          isLowContrast: true,
-        });
-      },
-      (err) => {
-        showSnackbar({
-          title: t('stkPush', 'STK Push'),
-          subtitle: t('stkPushError', 'STK Push request failed', { error: err.message }),
-          kind: 'error',
-          timeoutInMs: 3500,
-          isLowContrast: true,
-        });
-      },
-    );
-    closeModal();
+
+    setIsLoading(true);
+    const requestId = await initiateStkPush(payload, setNotification, mpesaAPIBaseUrl);
+    pollingTrigger({ requestId, requestStatus: 'INITIATED', amount: amountBilled });
+    setIsLoading(false);
   };
+
   return (
     <div>
       <ModalHeader closeModal={closeModal} />
       <ModalBody>
         <Form className={styles.form}>
           <h4>{t('paymentPayment', 'Bill Payment')}</h4>
-          <section className={styles.section}>
-            <Controller
-              control={control}
-              name="phoneNumber"
-              render={({ field }) => (
-                <Layer>
-                  <TextInput
-                    {...field}
-                    id="phoneNumber"
-                    type="text"
-                    labelText={t('phoneNumber', 'Phone Number')}
-                    size="md"
-                    placeholder="{t('phoneNumber,' 'Phone Number')}"
-                  />
-                </Layer>
-              )}
+          {notification && (
+            <InlineNotification
+              kind={notification.type}
+              title={notification.message}
+              onCloseButtonClick={() => setNotification(null)}
             />
-          </section>
+          )}
+          {isLoadingPhoneNumber ? (
+            <NumberInputSkeleton className={styles.section} />
+          ) : (
+            <section className={styles.section}>
+              <Controller
+                control={control}
+                name="phoneNumber"
+                render={({ field }) => (
+                  <Layer>
+                    <TextInput
+                      {...field}
+                      size="md"
+                      labelText={t('Phone Number', 'Phone Number')}
+                      placeholder={t('Phone Number', 'Phone Number')}
+                      invalid={!!errors.phoneNumber}
+                      invalidText={errors.phoneNumber?.message}
+                    />
+                  </Layer>
+                )}
+              />
+            </section>
+          )}
           <section className={styles.section}>
             <Controller
               control={control}
@@ -89,6 +132,8 @@ const InitiatePaymentDialog: React.FC<InitiatePaymentDialogProps> = ({ closeModa
                     size="md"
                     labelText={t('billAmount', 'Bill Amount')}
                     placeholder={t('billAmount', 'Bill Amount')}
+                    invalid={!!errors.billAmount}
+                    invalidText={errors.billAmount?.message}
                   />
                 </Layer>
               )}
@@ -98,8 +143,19 @@ const InitiatePaymentDialog: React.FC<InitiatePaymentDialogProps> = ({ closeModa
             <Button kind="secondary" className={styles.buttonLayout} onClick={closeModal}>
               {t('cancel', 'Cancel')}
             </Button>
-            <Button type="submit" className={styles.button} onClick={handleSubmit(onSubmit)}>
-              {t('initiatePay', 'Initiate Payment')}
+            <Button
+              type="submit"
+              className={styles.button}
+              onClick={handleSubmit(onSubmit)}
+              disabled={!isValid || isLoading || requestStatus === 'INITIATED'}>
+              {isLoading ? (
+                <>
+                  <Loading className={styles.button_spinner} withOverlay={false} small />{' '}
+                  {t('processingPayment', 'Processing Payment')}
+                </>
+              ) : (
+                t('initiatePay', 'Initiate Payment')
+              )}
             </Button>
           </section>
         </Form>

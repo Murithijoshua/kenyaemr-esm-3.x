@@ -48,11 +48,55 @@ export const familyHistoryDashboardMeta = {
   config: {},
 };
 
+export const contactListDashboardMeta = {
+  slot: 'patient-chart-relationships-slot',
+  columns: 1,
+  title: 'Contact List',
+  path: 'contact-list',
+  moduleName: '@kenyaemr/esm-patient-clinical-view-app',
+  config: {},
+};
+
+export const otherRelationshipsDashboardMeta = {
+  slot: 'patient-chart-relationships-slot',
+  columns: 1,
+  title: 'Other Relationships',
+  path: 'other-relationships',
+  moduleName: '@kenyaemr/esm-patient-clinical-view-app',
+  config: {},
+};
+
+export const relationshipsDashboardMeta = {
+  slot: 'patient-chart-relationships-slot',
+  columns: 1,
+  title: 'Relationships',
+  path: 'relationships',
+  moduleName: '@kenyaemr/esm-patient-clinical-view-app',
+  config: {},
+};
+
 export const labourDeliveryDashboardMeta = {
   slot: 'patient-chart-labour-delivery-slot',
   columns: 1,
   title: 'Labour and Delivery',
   path: 'labour-delivery',
+  moduleName: '@kenyaemr/esm-patient-clinical-view-app',
+  config: {},
+};
+export const caseManagementDashboardMeta = {
+  name: 'case-management',
+  slot: 'case-management-dashboard-slot',
+  title: 'Case management',
+  path: 'case-management',
+  columns: 1,
+  moduleName: '@kenyaemr/esm-patient-clinical-view-app',
+  config: {},
+};
+export const caseEncounterDashboardMeta = {
+  slot: 'patient-chart-relationships-slot',
+  columns: 1,
+  title: 'Case management',
+  path: 'case-management-encounters',
   moduleName: '@kenyaemr/esm-patient-clinical-view-app',
   config: {},
 };

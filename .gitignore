@@ -41,6 +41,7 @@ typings/
 
 # Optional npm cache directory
 .npm
+package-lock.json
 
 # ignores for Yarn v3 w/o PNP
 .pnp.*
@@ -83,3 +84,5 @@ dist
 e2e/storageState.json
 .env
 
+#vscode
+.vscode/settings.json

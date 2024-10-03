@@ -3,12 +3,15 @@ import { useTranslation } from 'react-i18next';
 import { Select, SelectItem } from '@carbon/react';
 import { useStandardRegimen } from '../hooks/useStandardRegimen';
 import styles from './standard-regimen.scss';
+import { usePatient } from '@openmrs/esm-framework';
+import { calculateAge, filterRegimenData } from './utils';
 
 interface StandardRegimenProps {
   category: string;
   setStandardRegimen: (value: any) => void;
   setStandardRegimenLine: (value: any) => void;
   selectedRegimenType: string;
+  visitDate: Date;
 }
 
 const StandardRegimen: React.FC<StandardRegimenProps> = ({
@@ -16,6 +19,7 @@ const StandardRegimen: React.FC<StandardRegimenProps> = ({
   setStandardRegimen,
   setStandardRegimenLine,
   selectedRegimenType,
+  visitDate,
 }) => {
   const { t } = useTranslation();
   const { standardRegimen, isLoading, error } = useStandardRegimen();
@@ -24,6 +28,9 @@ const StandardRegimen: React.FC<StandardRegimenProps> = ({
   const [selectedRegimen, setSelectedRegimen] = useState('');
   const [selectedRegimens, setSelectedRegimens] = useState([]);
   const matchingCategory = standardRegimen.find((item) => item.categoryCode === category);
+  const { patient } = usePatient();
+  const patientAge = calculateAge(patient?.birthDate, visitDate);
+  const filteredRegimenLineByAge = filterRegimenData(matchingCategory?.category, patientAge);
 
   useEffect(() => {
     const matchingRegimenLine = matchingCategory?.category.find(
@@ -61,7 +68,7 @@ const StandardRegimen: React.FC<StandardRegimenProps> = ({
             {!selectedRegimenLine || selectedRegimenLine == '--' ? (
               <SelectItem text={t('selectRegimenLine', 'Select Regimen Line')} value="" />
             ) : null}
-            {matchingCategory?.category.map((line) => (
+            {filteredRegimenLineByAge.map((line) => (
               <SelectItem key={line.regimenline} text={line.regimenline} value={line.regimenLineValue}>
                 {line.regimenline}
               </SelectItem>

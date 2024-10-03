@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.openmrs.org/routes.schema.json",
   "backendDependencies": {
-    "kenyaemr": "^18.2.0"
+    "kenyaemr": "^19.0.0"
   },
   "pages": [],
   "extensions": [
@@ -11,25 +11,45 @@
       "slot": "patient-chart-dashboard-slot"
     },
     {
-      "name": "family-history-link",
-      "component": "familyHistoryLink",
-      "slot": "patient-chart-dashboard-slot",
-      "order": 14,
-      "meta": {
-        "columns": 1,
-        "columnSpan": 1,
-        "slot": "patient-chart-family-history-slot",
-        "path": "family-history",
-        "layoutMode": "anchored"
-      }
-    },
-    {
       "name": "family-history",
       "slot": "patient-chart-family-history-slot",
       "component": "familyHistory",
       "order": 0,
       "online": true,
       "offline": false
+    },
+    {
+      "name": "other-relationships",
+      "slot": "patient-chart-family-history-slot",
+      "component": "otherRelationships",
+      "order": 0,
+      "online": true,
+      "offline": false
+    },
+    {
+      "name": "relationships-link",
+      "component": "relationshipsLink",
+      "slot": "patient-chart-dashboard-slot",
+      "order": 14,
+      "meta": {
+        "columns": 1,
+        "columnSpan": 1,
+        "slot": "patient-chart-relationships-slot",
+        "path": "relationships",
+        "layoutMode": "anchored"
+      }
+    },
+    {
+      "name": "relationships",
+      "slot": "patient-chart-relationships-slot",
+      "component": "relationships",
+      "order": 0,
+      "online": true,
+      "offline": false
+    },
+    {
+      "name": "contact-list-form",
+      "component": "contactListForm"
     },
     {
       "name": "maternal-and-child-health-dashboard-group-link",
@@ -174,6 +194,94 @@
       "order": 0,
       "online": true,
       "offline": false
+    },
+     {
+      "component": "caseManagementDashboardLink",
+      "name": "case-management-dashboard-link",
+      "slot": "homepage-dashboard-slot",
+      "meta": {
+        "name": "case-management",
+        "title": "Case Management",
+        "slot": "case-management-dashboard-slot",
+        "path": "/case-management"
+      }
+    },
+    {
+      "name": "in-patient-dashboard-link",
+      "component": "inPatientChartLink",
+      "slot": "patient-chart-dashboard-slot",
+      "order": 7,
+      "meta": {
+        "slot": "patient-chart-in-patient-dashboard-slot",
+        "path": "in-patient",
+        "layoutMode": "anchored",
+        "columns": 1,
+        "columnSpan": 1
+      }
+    },
+    {
+      "name": "in-patient-dashboard",
+      "slot": "patient-chart-in-patient-dashboard-slot",
+      "component": "inPatientChartDashboard",
+      "meta": {
+        "fullWidth": false
+      }
+    },
+    {
+      "name": "wrap-component-view",
+      "slot": "case-management-dashboard-slot",
+      "component": "wrapComponent",
+      "order": 2,
+      "online": true,
+      "offline": false
+    },
+    {
+      "name": "case-encounter-link",
+      "component": "caseEncounterDashboardLink",
+      "slot": "patient-chart-dashboard-slot",
+      "order": 14,
+      "meta": {
+        "columns": 1,
+        "columnSpan": 1,
+        "slot": "patient-chart-case-encounter-slot",
+        "path": "case-management-encounters",
+
+        "layoutMode": "anchored"
+      }
+    },
+     {
+      "name": "case-encounter-table",
+      "slot": "patient-chart-case-encounter-slot",
+      "component": "caseEncounterTable",
+      "order": 0,
+      "online": true,
+      "offline": false
     }
-  ]
+  ],
+  "modals": [
+	{
+	  "name": "birth-date-calculator",
+	  "component": "birthDateCalculator"
+	}
+],
+"workspaces": [
+  {
+    "name": "case-management-form",
+    "component": "caseManagementForm",
+    "title": "Case Management Form",
+    "type": "form"
+  },
+  {
+    "name": "family-relationship-form",
+    "component": "familyRelationshipForm",
+    "title": "Family Relationship Form",
+    "type": "form"
+  },
+  {
+    "name": "other-relationship-form",
+    "component": "otherRelationshipsForm",
+    "title": "Other Relationships Form",
+    "type": "form"
+  }
+]
 }

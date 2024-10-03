@@ -1,0 +1,20 @@
+@use '@carbon/colors';
+@use '@carbon/layout';
+@use '@carbon/type';
+
+.container {
+  height: calc(100vh - 3rem);
+  button {
+    height: auto !important;
+  }
+}
+
+.billsTableContainer {
+  margin: layout.$spacing-03 layout.$spacing-01;
+}
+
+.loadingContainer,
+.errorStateContainer,
+.emptyStateContainer {
+  margin-top: layout.$spacing-05;
+}

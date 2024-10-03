@@ -5,12 +5,15 @@ import { useStandardRegimen } from '../hooks/useStandardRegimen';
 import styles from './standard-regimen.scss';
 import { useNonStandardRegimen } from '../hooks/useNonStandardRegimen';
 import { Regimen } from '../types';
+import { usePatient } from '@openmrs/esm-framework';
+import { calculateAge, filterRegimenData } from './utils';
 
 interface NonStandardRegimenProps {
   category: string;
   setNonStandardRegimens: (value: any) => void;
   setStandardRegimenLine: (value: any) => void;
   selectedRegimenType: string;
+  visitDate: Date;
 }
 
 const NonStandardRegimen: React.FC<NonStandardRegimenProps> = ({
@@ -18,6 +21,7 @@ const NonStandardRegimen: React.FC<NonStandardRegimenProps> = ({
   selectedRegimenType,
   setNonStandardRegimens,
   setStandardRegimenLine,
+  visitDate,
 }) => {
   const { t } = useTranslation();
   const { standardRegimen } = useStandardRegimen();
@@ -26,6 +30,9 @@ const NonStandardRegimen: React.FC<NonStandardRegimenProps> = ({
   const matchingCategory = standardRegimen.find((item) => item.categoryCode === 'ARV'); // Non standard regimen will be exclusively for ARVs
   const [selectedRegimens, setSelectedRegimens] = useState(Array(5).fill(''));
   const [nonStandardRegimenObjects, setStandardRegimenObjects] = useState([]);
+  const { patient } = usePatient();
+  const patientAge = calculateAge(patient?.birthDate, visitDate);
+  const filteredRegimenLineByAge = filterRegimenData(matchingCategory?.category, patientAge);
 
   const handleRegimenLineChange = (e) => {
     setSelectedRegimenLine(e.target.value);
@@ -77,7 +84,7 @@ const NonStandardRegimen: React.FC<NonStandardRegimenProps> = ({
             {!selectedRegimenLine || selectedRegimenLine == '--' ? (
               <SelectItem text={t('selectRegimenLine', 'Select Regimen Line')} value="" />
             ) : null}
-            {matchingCategory?.category.map((line) => (
+            {filteredRegimenLineByAge.map((line) => (
               <SelectItem key={line.regimenline} text={line.regimenline} value={line.regimenLineValue}>
                 {line.regimenline}
               </SelectItem>

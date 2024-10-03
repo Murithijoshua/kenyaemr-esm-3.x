@@ -11,12 +11,19 @@ import {
   TableCell,
   TableContainer,
   Tile,
+  DataTableSkeleton,
 } from '@carbon/react';
 import { Close, DocumentAdd } from '@carbon/react/icons';
-import { CardHeader, EmptyState, launchStartVisitPrompt, ErrorState } from '@openmrs/esm-patient-common-lib';
+import {
+  CardHeader,
+  EmptyState,
+  launchStartVisitPrompt,
+  ErrorState,
+  launchPatientWorkspace,
+} from '@openmrs/esm-patient-common-lib';
 import { useTranslation } from 'react-i18next';
 import { PatientCarePrograms, useCarePrograms } from '../hooks/useCarePrograms';
-import { formatDate, launchWorkspace, useLayoutType, useVisit } from '@openmrs/esm-framework';
+import { formatDate, restBaseUrl, useLayoutType, useVisit } from '@openmrs/esm-framework';
 import capitalize from 'lodash/capitalize';
 import { mutate } from 'swr';
 
@@ -29,24 +36,38 @@ type CareProgramsProps = {
 const CarePrograms: React.FC<CareProgramsProps> = ({ patientUuid }) => {
   const { t } = useTranslation();
   const { currentVisit } = useVisit(patientUuid);
-  const { carePrograms, isLoading, isValidating, error } = useCarePrograms(patientUuid);
+  const { carePrograms, isLoading, isValidating, error, mutateEligiblePrograms } = useCarePrograms(patientUuid);
   const isTablet = useLayoutType() === 'tablet';
+
+  const handleMutations = () => {
+    mutateEligiblePrograms();
+    mutate(
+      (key) =>
+        typeof key === 'string' && key.startsWith(`${restBaseUrl}/kenyaemr/patientHistoricalEnrollment?patientUuid=`),
+      undefined,
+      { revalidate: true },
+    );
+    mutate(
+      (key) => typeof key === 'string' && key.startsWith(`${restBaseUrl}/programenrollment?patient=${patientUuid}`),
+      undefined,
+      { revalidate: true },
+    );
+  };
 
   const handleCareProgramClick = useCallback(
     (careProgram: PatientCarePrograms) => {
       const isEnrolled = careProgram.enrollmentStatus === 'active';
       const formUuid = isEnrolled ? careProgram.discontinuationFormUuid : careProgram.enrollmentFormUuid;
+
       const workspaceTitle = isEnrolled
         ? `${careProgram.display} Discontinuation form`
         : `${careProgram.display} Enrollment form`;
 
       currentVisit
-        ? launchWorkspace('patient-form-entry-workspace', {
+        ? launchPatientWorkspace('patient-form-entry-workspace', {
             workspaceTitle: workspaceTitle,
             mutateForm: () => {
-              mutate((key) => true, undefined, {
-                revalidate: true,
-              });
+              handleMutations();
             },
             formInfo: {
               encounterUuid: '',
@@ -89,7 +110,7 @@ const CarePrograms: React.FC<CareProgramsProps> = ({ patientUuid }) => {
           ),
         };
       }),
-    [carePrograms, handleCareProgramClick],
+    [carePrograms, isValidating],
   );
 
   const headers = [
@@ -104,13 +125,7 @@ const CarePrograms: React.FC<CareProgramsProps> = ({ patientUuid }) => {
   ];
 
   if (isLoading) {
-    return (
-      <InlineLoading
-        status="active"
-        iconDescription={t('loading', 'Loading')}
-        description={t('loadingDescription', 'Loading data...')}
-      />
-    );
+    return <DataTableSkeleton headers={headers} aria-label={t('loading', 'Loading...')} />;
   }
 
   if (error) {

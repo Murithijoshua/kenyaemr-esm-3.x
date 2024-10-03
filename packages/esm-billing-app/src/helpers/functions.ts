@@ -1,3 +1,4 @@
+import dayjs from 'dayjs';
 import { Payment, LineItem } from '../types';
 
 // amount already paid
@@ -41,7 +42,7 @@ export const convertToCurrency = (amountToConvert: number) => {
   let formattedAmount = formatter.format(Math.abs(amountToConvert));
 
   if (amountToConvert < 0) {
-    formattedAmount = `(${formattedAmount})`;
+    formattedAmount = `- ${formattedAmount}`;
   }
 
   return formattedAmount;
@@ -70,6 +71,29 @@ export const getGender = (gender: string, t) => {
  * @returns {string} The substring found after the first colon in the input string.
  */
 export function extractString(input: string): string {
-  const parts = input.split(':');
-  return parts.length < 2 ? input : parts[1];
+  const parts = input
+    .split(' ')
+    .map((s) => s.split(':')[1])
+    .filter((s) => Boolean(s));
+
+  const firstTwoBillableServices = parts.slice(0, 2);
+
+  if (parts.length <= 2) {
+    return firstTwoBillableServices.join(', ');
+  }
+
+  return `${firstTwoBillableServices.join(', ')} & ${parts.length - 2} other services`;
+}
+
+// cleans the provider display name
+export function extractNameString(formattedString: string) {
+  if (!formattedString) {
+    return '';
+  }
+  const parts = formattedString.split(' - ');
+  return parts.length > 1 ? parts[1] : '';
+}
+
+export function formatDate(date) {
+  return dayjs(date).format('YYYY-MM-DD');
 }

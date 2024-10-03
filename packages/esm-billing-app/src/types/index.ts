@@ -1,3 +1,4 @@
+import { OpenmrsResource } from '@openmrs/esm-framework';
 import { type Drug, type OrderBasketItem } from '@openmrs/esm-patient-common-lib';
 export interface MappedBill {
   uuid: string;
@@ -12,6 +13,7 @@ export interface MappedBill {
   status: string;
   identifier: string;
   dateCreated: string;
+  dateCreatedUnformatted: string;
   lineItems: Array<LineItem>;
   billingService: string;
   payments: Array<Payment>;
@@ -66,6 +68,7 @@ export interface LineItem {
   lineItemOrder: number;
   resourceVersion: string;
   paymentStatus: string;
+  itemOrServiceConceptUuid: string;
 }
 
 interface PatientLink {
@@ -110,18 +113,6 @@ interface PaymentInstanceType {
   description: string;
   retired: boolean;
 }
-
-export interface Payment {
-  uuid: string;
-  instanceType: PaymentInstanceType;
-  attributes: Attribute[];
-  amount: number;
-  amountTendered: number;
-  dateCreated: number;
-  voided: boolean;
-  resourceVersion: string;
-}
-
 export interface PatientInvoice {
   uuid: string;
   display: string;
@@ -175,6 +166,7 @@ export type BillingService = {
   serviceType: { display: string };
   shortName: string;
   uuid: string;
+  stockItem?: string;
 };
 
 export interface DrugOrderBasketItem extends OrderBasketItem {
@@ -250,3 +242,119 @@ interface CommonMedicationProps {
 export interface CommonMedicationValueCoded extends CommonMedicationProps {
   valueCoded: string;
 }
+
+export type PaymentMethod = {
+  uuid: string;
+  description: string;
+  name: string;
+  retired: boolean;
+};
+
+export interface Payment {
+  uuid: string;
+  instanceType: PaymentInstanceType;
+  attributes: Attribute[];
+  amount: number;
+  amountTendered: number;
+  dateCreated: string;
+  voided: boolean;
+  resourceVersion: string;
+}
+
+export type FormPayment = { method: string; amount: string | number; referenceCode?: number | string };
+
+export type PaymentFormValue = {
+  payment: Array<FormPayment>;
+};
+
+export type QueueEntry = {
+  queueEntry: {
+    uuid: string;
+    priority: OpenmrsResource;
+    status: OpenmrsResource;
+    queue: OpenmrsResource;
+    queueComingFrom: OpenmrsResource;
+  };
+};
+
+export type RequestStatus = 'INITIATED' | 'COMPLETE' | 'FAILED' | 'NOT-FOUND';
+
+export enum PaymentStatus {
+  POSTED = 'POSTED',
+  PENDING = 'PENDING',
+  PAID = 'PAID',
+  CREDITED = 'CREDITED',
+  CANCELLED = 'CANCELLED',
+  ADJUSTED = 'ADJUSTED',
+  EXEMPTED = 'EXEMPTED',
+}
+
+export interface FHIRErrorResponse {
+  resourceType: string;
+  issue: Issue[];
+}
+
+export interface Issue {
+  severity: string;
+  code: string;
+  diagnostics: string;
+}
+
+export type FHIRPatientResponse = {
+  resourceType: string;
+  id: string;
+  extension: Array<{
+    url: string;
+    valueCoding?: {
+      system: string;
+      code: string;
+      display: string;
+    };
+    valueString?: string;
+    valueInteger?: number;
+  }>;
+  identifier: Array<{
+    use: string;
+    type: {
+      coding: Array<{
+        system: string;
+        code: string;
+        display: string;
+      }>;
+    };
+    value: string;
+  }>;
+  active: boolean;
+  name: Array<{
+    text: string;
+    family: string;
+    given: Array<string>;
+    prefix: Array<string>;
+  }>;
+  telecom: Array<{
+    system: string;
+    value: string;
+  }>;
+  gender: string;
+  birthDate: string;
+  deceasedBoolean: boolean;
+  address: Array<{
+    extension: Array<
+      Array<{
+        url: string;
+        valueString: string;
+      }>
+    >;
+    use: string;
+    text: string;
+    city: string;
+    postalCode: string;
+    country: string;
+  }>;
+  maritalStatus: {
+    coding: Array<{
+      system: string;
+      code: string;
+    }>;
+  };
+};

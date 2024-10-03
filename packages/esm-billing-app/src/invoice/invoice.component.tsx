@@ -1,19 +1,19 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Button, InlineLoading } from '@carbon/react';
-import { Printer } from '@carbon/react/icons';
+import { BaggageClaim, Printer, Wallet } from '@carbon/react/icons';
 import { useParams } from 'react-router-dom';
 import { useReactToPrint } from 'react-to-print';
 import { useTranslation } from 'react-i18next';
-import { ExtensionSlot, usePatient, showModal } from '@openmrs/esm-framework';
+import { ExtensionSlot, usePatient, showModal, formatDatetime, parseDate, navigate } from '@openmrs/esm-framework';
 import { ErrorState } from '@openmrs/esm-patient-common-lib';
 import { convertToCurrency } from '../helpers';
 import { LineItem } from '../types';
-import { useBill } from '../billing.resource';
+import { useBill, useDefaultFacility } from '../billing.resource';
 import InvoiceTable from './invoice-table.component';
 import Payments from './payments/payments.component';
-import PrintReceipt from './printable-invoice/print-receipt.component';
 import PrintableInvoice from './printable-invoice/printable-invoice.component';
 import styles from './invoice.scss';
+import { spaBasePath } from '../constants';
 
 interface InvoiceDetailsProps {
   label: string;
@@ -22,40 +22,30 @@ interface InvoiceDetailsProps {
 
 const Invoice: React.FC = () => {
   const { t } = useTranslation();
+  const { data: facilityInfo } = useDefaultFacility();
   const { billUuid, patientUuid } = useParams();
+  const [isPrinting, setIsPrinting] = useState(false);
   const { patient, isLoading: isLoadingPatient } = usePatient(patientUuid);
   const { bill, isLoading: isLoadingBill, error } = useBill(billUuid);
-  const [isPrinting, setIsPrinting] = useState(false);
   const [selectedLineItems, setSelectedLineItems] = useState([]);
   const componentRef = useRef<HTMLDivElement>(null);
-  const onBeforeGetContentResolve = useRef<(() => void) | null>(null);
+
   const handleSelectItem = (lineItems: Array<LineItem>) => {
-    setSelectedLineItems(lineItems);
+    const paidLineItems = bill?.lineItems?.filter((item) => item.paymentStatus === 'PAID') ?? [];
+    setSelectedLineItems([...lineItems, ...paidLineItems]);
   };
 
-  const handleAfterPrint = useCallback(() => {
-    onBeforeGetContentResolve.current = null;
-    setIsPrinting(false);
-  }, []);
-
-  const reactToPrintContent = useCallback(() => componentRef.current, []);
-
-  const handleOnBeforeGetContent = useCallback(() => {
-    return new Promise<void>((resolve) => {
-      if (patient && bill) {
-        setIsPrinting(true);
-        onBeforeGetContentResolve.current = resolve;
-      }
-    });
-  }, [bill, patient]);
-
   const handlePrint = useReactToPrint({
-    content: reactToPrintContent,
+    content: () => componentRef.current,
     documentTitle: `Invoice ${bill?.receiptNumber} - ${patient?.name?.[0]?.given?.join(' ')} ${
       patient?.name?.[0].family
     }`,
-    onBeforeGetContent: handleOnBeforeGetContent,
-    onAfterPrint: handleAfterPrint,
+    onBeforePrint() {
+      setIsPrinting(true);
+    },
+    onAfterPrint() {
+      setIsPrinting(false);
+    },
     removeAfterPrint: true,
   });
 
@@ -71,17 +61,11 @@ const Invoice: React.FC = () => {
     setSelectedLineItems(paidLineItems);
   }, [bill.lineItems]);
 
-  useEffect(() => {
-    if (isPrinting && onBeforeGetContentResolve.current) {
-      onBeforeGetContentResolve.current();
-    }
-  }, [isPrinting]);
-
   const invoiceDetails = {
     'Total Amount': convertToCurrency(bill?.totalAmount),
     'Amount Tendered': convertToCurrency(bill?.tenderedAmount),
     'Invoice Number': bill.receiptNumber,
-    'Date And Time': bill?.dateCreated,
+    'Date And Time': formatDatetime(parseDate(bill.dateCreated), { mode: 'standard', noToday: true }),
     'Invoice Status': bill?.status,
   };
 
@@ -115,28 +99,58 @@ const Invoice: React.FC = () => {
             <InvoiceDetails key={key} label={key} value={val} />
           ))}
         </section>
-        <div>
-          <Button onClick={handleBillPayment} iconDescription="Initiate Payment" size="md">
-            {t('initiatePayment', 'Initiate Payment')}
-          </Button>
-          <Button
-            disabled={isPrinting}
-            onClick={handlePrint}
-            renderIcon={(props) => <Printer size={24} {...props} />}
-            iconDescription="Print bill"
-            className={styles.button}
-            size="md">
-            {t('printBill', 'Print bill')}
-          </Button>
-          {bill.status === 'PAID' ? <PrintReceipt billId={bill?.id} /> : null}
-        </div>
+      </div>
+      <div className={styles.actionArea}>
+        <Button
+          kind="secondary"
+          size="sm"
+          disabled={bill?.status !== 'PAID'}
+          onClick={() => navigate({ to: `\${openmrsBase}/ws/rest/v1/cashier/receipt?billId=${bill.id}` })}
+          renderIcon={Printer}
+          iconDescription="Add">
+          {t('printRecept', 'Print receipt')}
+        </Button>
+        <Button
+          onClick={handlePrint}
+          kind="tertiary"
+          size="sm"
+          disabled={isPrinting}
+          renderIcon={Printer}
+          iconDescription="Add"
+          tooltipPosition="right">
+          {isPrinting ? t('printingInvoice', 'Printing invoice...') : t('printInvoice', 'Print invoice')}
+        </Button>
+        <Button
+          onClick={handleBillPayment}
+          disabled={bill?.status === 'PAID'}
+          size="sm"
+          renderIcon={Wallet}
+          iconDescription="Add"
+          tooltipPosition="left">
+          {t('mpesaPayment', 'MPESA Payment')}
+        </Button>
+        <Button
+          onClick={() => navigate({ to: `${spaBasePath}/billing/patient/${patientUuid}/${billUuid}/claims` })}
+          kind="danger"
+          size="sm"
+          renderIcon={BaggageClaim}
+          iconDescription="Add"
+          tooltipPosition="bottom">
+          {t('claim', 'Process claims')}
+        </Button>
       </div>
 
       <InvoiceTable bill={bill} isLoadingBill={isLoadingBill} onSelectItem={handleSelectItem} />
       <Payments bill={bill} selectedLineItems={selectedLineItems} />
 
-      <div className={styles.printContainer} ref={componentRef}>
-        {isPrinting && <PrintableInvoice bill={bill} patient={patient} isLoading={isLoadingPatient} />}
+      <div className={styles.printContainer}>
+        <PrintableInvoice
+          ref={componentRef}
+          facilityInfo={facilityInfo}
+          bill={bill}
+          patient={patient}
+          isPrinting={isPrinting}
+        />
       </div>
     </div>
   );
